@@ -65,21 +65,6 @@ To obtain the necessary API key and organization from OpenAI, follow these steps
 
 You now have the API key and organization ID required for the Exam Generator.
 
-## Setting Secrets
-
-Create new directory `.streamlit` in the root directory of the project and create a new file `secrets.toml` inside it.
-
-```
-mkdir .streamlit
-touch .streamlit/secrets.toml
-```
-
-Open the `secrets.toml` file and add the following lines:
-
-```
-OPENAI_TOKEN = <yout-token>
-OPENAI_ORG = <your-org>
-```
 
 ## Executing the App
 

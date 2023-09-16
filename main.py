@@ -1,18 +1,18 @@
 import openai
 import streamlit as st
-
+import os
 from app.app import get_app
 
-OPENAI_TOKEN = "OPENAI_TOKEN"
-OPENAI_ORG = "OPENAI_ORG"
-
+# Applying our API key and organization ID to OpenAI
+OPENAI_ORG = os.getenv('ORGANIZATION_ID')
+OPENAI_TOKEN = os.getenv('OPENAI_API_KEY')
 
 def initial_config():
     """
     Initial configuration of OpenAI API and streamlit
     """
-    openai.organization = st.secrets[OPENAI_ORG]
-    openai.api_key = st.secrets[OPENAI_TOKEN]
+    openai.organization = OPENAI_ORG
+    openai.api_key = OPENAI_TOKEN
 
     st.set_page_config(
         page_title="Exam generator",

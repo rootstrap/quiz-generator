@@ -1,5 +1,5 @@
 from typing import List
-
+from utils.question_type import QuestionType
 import openai
 import re
 
@@ -16,11 +16,12 @@ def complete_text(prompt: str) -> str:
     """
 
     messages = [{"role": "user", "content": prompt}]
+    print('prompt:', prompt)
 
     return openai.ChatCompletion.create(model=MODEL, messages=messages)["choices"][0]["message"]["content"]
 
 
-def prepare_prompt(topics: str, number_of_questions: int, number_of_answers: int) -> str:
+def prepare_prompt_multiple_choice(text: str, number_of_questions: int, number_of_answers: int) -> str:
     """
     Prepare prompt to complete
     :param topics: Topics to include in the exam
@@ -32,9 +33,35 @@ def prepare_prompt(topics: str, number_of_questions: int, number_of_answers: int
         f"Create an exam of multiple choice questions with {number_of_questions} "
         f"questions and {number_of_answers} of possible answers in each question. "
         f"Put the correct answer in bold (surrounded by **) in its original spot. "
-        f"The exam should be about {topics}. Only generate the questions and "
-        f"answers, not the exam itself."
+        f"Only generate the questions and answers, not the exam itself."
+         f"The exam should be about the following text {text}."
     )
+
+def prepare_prompt_open_question(text: str, number_of_questions: int) -> str:
+    """
+    Prepare prompt to complete
+    :param topics: Topics to include in the exam
+    :param number_of_questions: Number of questions
+    :return: Prompt to complete
+    """
+    return (
+        f"Create {number_of_questions} questions for an exam."
+        f"Only generate the questions, not the exam itself."
+        f"Separate de questions with \n."
+        f"The exam should be about the following text {text}."
+    )
+
+def prepare_promt_variation_question(question: str, number_of_variations: int):
+    """
+    Prepare prompt to complete
+    :param question: Question that we want to create variations for 
+    :param number_of_variations: Number of variations for the question 
+    :return: Prompt to complete
+    """
+    return (
+        f"Create {number_of_variations} for the following question: {question}.",
+    )
+
 
 
 def sanitize_line(line: str, is_question: bool) -> str:
@@ -98,7 +125,7 @@ def response_to_questions(response: str) -> List[Question]:
     return questions
 
 
-def get_questions(topics: str, number_of_questions: int, number_of_answers: int) -> List[Question]:
+def get_questions(question_types, question_args) -> List[Question]:
     """
     Get questions from OpenAI API
     :param topics: Topics to include in the exam
@@ -106,9 +133,19 @@ def get_questions(topics: str, number_of_questions: int, number_of_answers: int)
     :param number_of_answers: Number of answers
     :return: List of questions
     """
-    prompt = prepare_prompt(topics, number_of_questions, number_of_answers)
-    response = complete_text(prompt)
-    return response_to_questions(response)
+    f = open("data/content.txt", "r")
+    content = f.read()
+    questions = {}
+    if QuestionType.MULTIPLE_CHOICE in question_types: 
+        prompt = prepare_prompt_multiple_choice(content, question_args['number_of_mc_questions'], question_args['number_of_answers'])
+        response = complete_text(prompt)
+        print(response)
+    if QuestionType.OPEN in question_types: 
+        print('question_args:', question_args)
+        prompt = prepare_prompt_open_question(content, question_args['number_of_open_questions'])
+        response = complete_text(prompt)
+        print(response)
+        
 
 
 def clarify_question(question: Question) -> str:

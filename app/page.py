@@ -2,6 +2,10 @@ from abc import abstractmethod
 from typing import Optional
 
 import streamlit as st
+import pandas as pd
+from io import StringIO
+from utils.question_type import QuestionType
+
 
 from model.question import Question
 from utils.api import get_questions, clarify_question
@@ -12,9 +16,10 @@ class PageEnum:
     """
     Enum for pages
     """
-    GENERATE_EXAM = 0
-    QUESTIONS = 1
-    RESULTS = 2
+    UPLOAD_FILE = 0
+    GENERATE_EXAM = 1
+    QUESTIONS = 2
+    RESULTS = 3
 
 
 class Page:
@@ -25,59 +30,74 @@ class Page:
         Render the page (must be implemented by subclasses)
         """
 
+class UploadFile(Page):
+    def render(self, app):
+        description = """App for generate a quiz automatically from the content of the course"""
+        st.title("Generate questions")
+        st.markdown(description)
+        uploaded_file = st.file_uploader("Upload text file")
+        if uploaded_file is not None:
+            f = open("data/content.txt", "w")
+            f.write(uploaded_file.getvalue().decode("utf-8"))
+            f.close()
+        
+        _, right = st.columns(2)
+
+        with right:
+            if st.button("Configure Exam"):
+                app.reset()
+                app.change_page(PageEnum.GENERATE_EXAM)
+
 
 class GenerateExamPage(Page):
-
-    description = """
-    This app generates exams with questions and answers, powered by GPT-3.5 (a.k.a. ChatGPT), 
-    and can generate questions and answers on any topic. You can download the questions as a 
-    PDF file or take the exam within the app. However, the quality of the generated questions 
-    and answers may vary depending on the topic. If you are unsure about the accuracy of any of 
-    the questions, you can request clarifications from the AI in the results page. In most cases, 
-    the AI will be able to rectify any mistakes. However, if you are still unsure, it is recommended 
-    that you search for the topic on the internet or ask an expert.
-
-    The app is intended for learning purposes only, to help students practice and test their knowledge 
-    with immediate feedback. It is not intended to generate exams for real-world applications. Please 
-    note that the app is not responsible for any damage caused by its use.
-    """
-
     def render(self, app):
-        """
-        Render the page
-        """
-        st.title("Generate exam")
+        st.write('What type of questions do you want to generate?:')
+        question_types = []
+        for name in [e.name for e in QuestionType]: 
+            print(name)
+            checkbox = st.checkbox(name)
+            print(checkbox)
+            if checkbox: 
+                question_types.append(QuestionType[name])
 
-        st.markdown(self.description)
-
-        topics = st.text_input(
-            "Topics",
-            placeholder="Topics to include in the exam",
-            help="It is recommended to use a comma-separated list of topics"
-        )
-
-        number_of_questions = st.number_input(
-            "Number of questions",
-            min_value=5,
-            max_value=30,
-            value=10,
-            help="Number of questions that will be generated"
-        )
-
-        number_of_answers = st.number_input(
-            "Number of answers",
+        question_args = {}
+        if QuestionType.MULTIPLE_CHOICE in question_types:
+            question_args['number_of_mc_questions'] = st.number_input(
+                "Number of questions",
+                min_value=5,
+                max_value=30,
+                value=10,
+                help="Number of questions that will be generated"
+            )
+            question_args['number_of_answers'] = st.number_input(
+            "Number of answers for multiple choice questions",
             min_value=3,
             max_value=5,
             value=4,
-            help="Number of possible answers that will be generated for each question"
+            help="Number of possible answers that will be generated for each multiple choice question"
         )
+        
+        if QuestionType.OPEN in question_types:
+            question_args['number_of_open_questions'] = st.number_input(
+                "Number of questions",
+                min_value=5,
+                max_value=30,
+                value=10,
+                help="Number of questions that will be generated"
+            )
+            question_args['number_of_variations'] = st.number_input(
+                "Number of variations for open questions",
+                value=4,
+                help="Number of possible answers that will be generated for each open question"
+            )
 
         if st.button("Generate", help="Generate the questions according to the parameters"):
 
             st.warning("Generating questions. This may take a while...")
             try:
-                app.questions = get_questions(topics, number_of_questions, number_of_answers)
-            except Exception:
+                app.questions = get_questions(question_types, question_args)
+            except Exception as ex:
+                print(ex)
                 st.error("An error occurred while generating the questions. Please try again")
 
         if app.questions is not None:

@@ -1,6 +1,6 @@
 import streamlit as st
 
-from app.page import GenerateExamPage, PageEnum, QuestionsPage, ResultsPage
+from app.page import UploadFile, GenerateExamPage, PageEnum, QuestionsPage, ResultsPage
 
 
 @st.cache_resource(ttl=60 * 60 * 24)
@@ -19,12 +19,13 @@ class App:
 
     def __init__(self):
         self.pages = {
+            PageEnum.UPLOAD_FILE: UploadFile(),
             PageEnum.GENERATE_EXAM: GenerateExamPage(),
             PageEnum.QUESTIONS: QuestionsPage(),
             PageEnum.RESULTS: ResultsPage()
         }
 
-        self.current_page = self.pages[PageEnum.GENERATE_EXAM]
+        self.current_page = self.pages[PageEnum.UPLOAD_FILE]
 
         self._questions = None
         self._answers = {}
