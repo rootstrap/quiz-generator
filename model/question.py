@@ -17,18 +17,19 @@ class Question:
     - id: Question ID
     - question: Question text
     - answers: List of answers
-    - correct_answer: Index of the correct answer
+    - correct_answers: List of correct answers 
     """
 
-    def __init__(self, id:int, 
+    def __init__(self, 
+                 id:int, 
                  question: str, 
                  question_type: QuestionType, 
                  variations:List[str] = [], 
                  answers: List[str]=[], 
-                 correct_answer: int=-1):
+                 correct_answers: List[int]=[]):
         self.id = id
         self.question = question
         self.question_type = question_type
         self.variations = variations
         self.answers = answers
-        self.correct_anser = correct_answer
+        self.correct_answers = correct_answers

@@ -22,12 +22,16 @@ def questions_to_markdown(questions: List[Question]) -> str:
         if question.question_type == QuestionType.MULTIPLE_CHOICE:
             for answer in question.answers:
                 markdown += f"- [ ] {answer}\n"
+            if len(question.correct_answers)>0:
+                markdown += f"\nCorrect: {question.answers[question.correct_answers[0]]}"
+                for i in range(1,len(question.correct_answers)):
+                     markdown +=f",{question.answers[i]}"
+                markdown +="\n"
+
         if question.question_type == QuestionType.OPEN:
             for variation in question.variations:
                 markdown += f"- [Variation] {variation}\n"
-        if question.correct_anser != -1:
-                markdown += f"Correct answer:{question.correct_anser}"
-
+            
         markdown += "\n"
 
     return markdown

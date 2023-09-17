@@ -29,7 +29,7 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
 
     
 
-def prepare_prompt_multiple_choice(text: str, number_of_questions: int, number_of_answers: int) -> str:
+def prepare_prompt_multiple_choice(text: str, current_questions: list, number_of_questions: int, number_of_answers: int) -> str:
     """
     Prepare prompt to complete
     :param topics: Topics to include in the exam
@@ -37,13 +37,17 @@ def prepare_prompt_multiple_choice(text: str, number_of_questions: int, number_o
     :param number_of_answers: Number of answers
     :return: Prompt to complete
     """
-    return (
-        f"Create an exam of multiple choice questions with {number_of_questions} "
+    prompt = (f"Create an exam of multiple choice questions with {number_of_questions} "
         f"questions and {number_of_answers} of possible answers in each question. "
-        f"Put the correct answer in bold (surrounded by **) in its original spot. "
+        f"Surround the line for the correct question with ** in its original spot. "
         f"Only generate the questions and answers, not the exam itself."
-         f"The exam should be about the following text {text}."
-    )
+        f"Number the answers in abc format")
+        
+    if len(current_questions)>0:
+        prompt += f"The questions should not be in {current_questions}"
+
+    prompt +=  f"The exam should be about the following text {text}."
+    return prompt
 
 def prepare_prompt_open_question(text: str, number_of_questions: int) -> str:
     """
@@ -86,17 +90,18 @@ def sanitize_line(line: str, is_question: bool) -> str:
     return new_line
 
 
-def get_correct_answer(answers: List[str]) -> int:
+def get_correct_answers(answers: List[str]) -> int:
     """
     Return the index of the correct answer
     :param answers: List of answers
     :return: Index of the correct answer if found, -1 otherwise
     """
+    correct_answers = []
     for index, answer in enumerate(answers):
         if answer.count("**") > 0:
-            return index
+            correct_answers.append(index)
 
-    return -1
+    return correct_answers
 
 
 def response_to_questions(response: str) -> List[Question]:
@@ -120,14 +125,19 @@ def response_to_questions(response: str) -> List[Question]:
         question = sanitize_line(question_lines[0], is_question=True)
         answers = list(map(lambda line: sanitize_line(line, is_question=False), question_lines[1:]))
 
-        correct_answer = get_correct_answer(answers)
-        answers[correct_answer] = answers[correct_answer].replace("**", "")
+        correct_answers = get_correct_answers(answers)
+        if len(correct_answers)>0:
+            for c in correct_answers:
+                answers[c] = answers[c].replace("**", "")
+                answers = list(map(lambda answer: answer.strip(), answers))
+            questions.append(Question(count, 
+                                    question, 
+                                    QuestionType.MULTIPLE_CHOICE, 
+                                    answers=answers, 
+                                    correct_answers=correct_answers)
+                            )
 
-        answers = list(map(lambda answer: answer.strip(), answers))
-
-        questions.append(Question(count, question, QuestionType.MULTIPLE_CHOICE, answers=answers, correct_answer=correct_answer))
-
-        count += 1
+            count += 1
 
     return questions
 
@@ -189,9 +199,20 @@ def get_open_questions(content, number_of_open_questions, number_of_variatons) -
     return result_questions
 
 def get_mc_questions(content, number_of_mc_questions, number_of_answers) -> List[Question]:
-    prompt = prepare_prompt_multiple_choice(content, number_of_mc_questions, number_of_answers)
-    response = complete_text(prompt)
-    return response_to_questions(response)
+    questions = []
+    count = 0
+    current_questions = []
+    while count!=number_of_mc_questions:
+        number_of_questions = number_of_mc_questions-count
+        print(f'Getting {number_of_questions} questions')
+        prompt = prepare_prompt_multiple_choice(content, current_questions, number_of_questions, number_of_answers)
+        response = complete_text(prompt)
+        result = response_to_questions(response)
+        questions.extend(result)
+        current_questions = list(map(lambda x:x.question, result))
+        count = len(questions)
+        
+    return questions
 
 
 def get_questions(question_types, question_args) -> List[Question]:
@@ -224,6 +245,6 @@ def clarify_question(question: Question) -> str:
 
     prompt = f"Given this question: {question.question}\n"
     prompt += f" and these answers: {join_questions}\n\n"
-    prompt += f"Why the correct answer is {chr(ord('a') + question.correct_answer)}?\n\n"
+    prompt += f"Why the correct answer is {chr(ord('a') + question.correct_answers)}?\n\n"
 
     return complete_text(prompt)
