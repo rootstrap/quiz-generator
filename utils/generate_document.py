@@ -2,7 +2,8 @@ import os
 import subprocess
 from typing import List
 
-from model.question import Question
+from model.question import Question, QuestionType
+
 
 TEMP_MD_FILE = "__temp.md"
 TEMP_PDF_FILE = "__temp.pdf"
@@ -18,9 +19,14 @@ def questions_to_markdown(questions: List[Question]) -> str:
 
     for index, question in enumerate(questions):
         markdown += f"**{index + 1}. {question.question}**\n\n"
-
-        for answer in question.answers:
-            markdown += f"- [ ] {answer}\n"
+        if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            for answer in question.answers:
+                markdown += f"- [ ] {answer}\n"
+        if question.question_type == QuestionType.OPEN:
+            for variation in question.variations:
+                markdown += f"- [Variation] {variation}\n"
+        if question.correct_anser != -1:
+                markdown += f"Correct answer:{question.correct_anser}"
 
         markdown += "\n"
 

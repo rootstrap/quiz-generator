@@ -1,25 +1,33 @@
 from typing import List
-from utils.question_type import QuestionType
+from model.question import QuestionType
 import openai
 import re
+import json
 
 from model.question import Question
 
 MODEL = "gpt-3.5-turbo"
 
 
-def complete_text(prompt: str) -> str:
+def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> str:
     """
     Complete text using GPT-3.5 Turbo
     :param prompt: Prompt to complete
     :return: Completed text
     """
+    if function_calling:
+        response = openai.ChatCompletion.create(
+            model = 'gpt-3.5-turbo',
+            messages = [{'role': 'user', 'content': prompt}],
+            functions = custom_functions,
+            function_call = 'auto'
+        )
+        return json.loads(response['choices'][0]['message']['function_call']['arguments'])
+    else:
+        messages = [{"role": "user", "content": prompt}]
+        return openai.ChatCompletion.create(model=MODEL, messages=messages)["choices"][0]["message"]["content"]
 
-    messages = [{"role": "user", "content": prompt}]
-    print('prompt:', prompt)
-
-    return openai.ChatCompletion.create(model=MODEL, messages=messages)["choices"][0]["message"]["content"]
-
+    
 
 def prepare_prompt_multiple_choice(text: str, number_of_questions: int, number_of_answers: int) -> str:
     """
@@ -51,7 +59,7 @@ def prepare_prompt_open_question(text: str, number_of_questions: int) -> str:
         f"The exam should be about the following text {text}."
     )
 
-def prepare_promt_variation_question(question: str, number_of_variations: int):
+def prepare_prompt_variation_question(question: str, number_of_variations: int):
     """
     Prepare prompt to complete
     :param question: Question that we want to create variations for 
@@ -59,10 +67,9 @@ def prepare_promt_variation_question(question: str, number_of_variations: int):
     :return: Prompt to complete
     """
     return (
-        f"Create {number_of_variations} for the following question: {question}.",
-    )
-
-
+        f"Create {number_of_variations} for the following question,"
+        f"keeping the same meaning in the question, only rephrase it: {question}."
+        )
 
 def sanitize_line(line: str, is_question: bool) -> str:
     """
@@ -118,11 +125,73 @@ def response_to_questions(response: str) -> List[Question]:
 
         answers = list(map(lambda answer: answer.strip(), answers))
 
-        questions.append(Question(count, question, answers, correct_answer))
+        questions.append(Question(count, question, QuestionType.MULTIPLE_CHOICE, answers=answers, correct_answer=correct_answer))
 
         count += 1
 
     return questions
+
+def get_variations(question_number, question, number_of_variatons) -> Question:
+    prompt = prepare_prompt_variation_question(question, number_of_variatons)
+    response = complete_text(prompt, False)
+    custom_functions = [
+        {
+            'name': 'extract_questions',
+            'description': 'Get the questions as a array (without the question number) from the body of the input text',
+            'parameters': {
+                'type': 'object',
+                "properties": {
+                    "questions": {
+                        "type": "string",
+                        "description": "The list of questions WITHOUT the question number, WITHOUT newline, SEPARATED by #",
+                    }
+                },
+                "required": ["questions"],
+            }
+        }
+    ]
+    response = complete_text(response, True, custom_functions)
+    variations = response['questions'].split('#')
+    return Question(question_number, question, QuestionType.OPEN, variations=variations)
+
+
+def get_open_questions(content, number_of_open_questions, number_of_variatons) -> List[Question]:
+    prompt = prepare_prompt_open_question(content, number_of_open_questions)
+    response = complete_text(prompt)
+    custom_functions = [
+        {
+            'name': 'extract_questions',
+            'description': 'Get the questions as a array (without the question number) from the body of the input text',
+            'parameters': {
+                'type': 'object',
+                "properties": {
+                    "questions": {
+                        "type": "string",
+                        "description": "The list of questions WITHOUT the question number, WITHOUT newline, SEPARATED by #",
+                    }
+                },
+                "required": ["questions"],
+            }
+        }
+    ]
+    response = complete_text(response, True, custom_functions)
+    questions = response['questions'].split('#')
+    result_questions = []
+    i = 0
+    if number_of_variatons>0:
+        for question in questions: 
+            result_questions.append(get_variations(i, question, number_of_variatons))
+            i += 1 
+    else: 
+        for question in questions:
+            result_questions.append(Question(i, question, QuestionType.OPEN))
+            i += 1 
+    return result_questions
+
+def get_mc_questions(content, number_of_mc_questions, number_of_answers) -> List[Question]:
+    prompt = prepare_prompt_multiple_choice(content, number_of_mc_questions, number_of_answers)
+    response = complete_text(prompt)
+    return response_to_questions(response)
 
 
 def get_questions(question_types, question_args) -> List[Question]:
@@ -135,17 +204,14 @@ def get_questions(question_types, question_args) -> List[Question]:
     """
     f = open("data/content.txt", "r")
     content = f.read()
-    questions = {}
+    questions = []
     if QuestionType.MULTIPLE_CHOICE in question_types: 
-        prompt = prepare_prompt_multiple_choice(content, question_args['number_of_mc_questions'], question_args['number_of_answers'])
-        response = complete_text(prompt)
-        print(response)
+        questions = get_mc_questions(content, question_args['number_of_mc_questions'], question_args['number_of_answers']) 
     if QuestionType.OPEN in question_types: 
-        print('question_args:', question_args)
-        prompt = prepare_prompt_open_question(content, question_args['number_of_open_questions'])
-        response = complete_text(prompt)
-        print(response)
-        
+        questions.extend(get_open_questions(content, question_args['number_of_open_questions'], question_args['number_of_variations']))
+    return questions
+
+            
 
 
 def clarify_question(question: Question) -> str:

@@ -4,7 +4,7 @@ from typing import Optional
 import streamlit as st
 import pandas as pd
 from io import StringIO
-from utils.question_type import QuestionType
+from model.question import QuestionType
 
 
 from model.question import Question
@@ -54,9 +54,7 @@ class GenerateExamPage(Page):
         st.write('What type of questions do you want to generate?:')
         question_types = []
         for name in [e.name for e in QuestionType]: 
-            print(name)
             checkbox = st.checkbox(name)
-            print(checkbox)
             if checkbox: 
                 question_types.append(QuestionType[name])
 
@@ -67,28 +65,34 @@ class GenerateExamPage(Page):
                 min_value=5,
                 max_value=30,
                 value=10,
-                help="Number of questions that will be generated"
+                help="Number of questions that will be generated", 
+                key="number_of_mc_questions"
             )
             question_args['number_of_answers'] = st.number_input(
             "Number of answers for multiple choice questions",
             min_value=3,
             max_value=5,
             value=4,
-            help="Number of possible answers that will be generated for each multiple choice question"
+            help="Number of possible answers that will be generated for each multiple choice question",
+            key="number_of_answers"
         )
         
         if QuestionType.OPEN in question_types:
             question_args['number_of_open_questions'] = st.number_input(
                 "Number of questions",
-                min_value=5,
+                min_value=1,
                 max_value=30,
-                value=10,
-                help="Number of questions that will be generated"
+                value=5,
+                help="Number of questions that will be generated",
+                key="number_of_open_questions"
             )
             question_args['number_of_variations'] = st.number_input(
                 "Number of variations for open questions",
+                min_value=0,
+                max_value=8,
                 value=4,
-                help="Number of possible answers that will be generated for each open question"
+                help="Number of possible answers that will be generated for each open question",
+                key="number_of_variations"
             )
 
         if st.button("Generate", help="Generate the questions according to the parameters"):
