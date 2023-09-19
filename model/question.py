@@ -33,3 +33,22 @@ class Question:
         self.variations = variations
         self.answers = answers
         self.correct_answers = correct_answers
+        self.response = []
+
+    def set_response(self, response):
+        self.response = response
+
+    def get_response(self):
+        return self.response
+
+    def check_response(self):
+        if self.question_type==QuestionType.MULTIPLE_CHOICE:
+            if len(self.response)==len(self.correct_answers):
+                for r in self.response:
+                    if r not in self.correct_answers:
+                        return False
+                return True
+            else:
+                return False
+        else:
+            return False    

@@ -25,7 +25,8 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
         return json.loads(response['choices'][0]['message']['function_call']['arguments'])
     else:
         messages = [{"role": "user", "content": prompt}]
-        return openai.ChatCompletion.create(model=MODEL, messages=messages)["choices"][0]["message"]["content"]
+        response = openai.ChatCompletion.create(model=MODEL, messages=messages)
+        return response["choices"][0]["message"]["content"]
 
     
 
@@ -38,10 +39,10 @@ def prepare_prompt_multiple_choice(text: str, current_questions: list, number_of
     :return: Prompt to complete
     """
     prompt = (f"Create an exam of multiple choice questions with {number_of_questions} "
-        f"questions and {number_of_answers} of possible answers in each question. "
-        f"Surround the line for the correct question with ** in its original spot. "
+        f"questions and {number_of_answers} possible answers in each question. "
+        f"Surround the correct question with ** in its original spot. "
         f"Only generate the questions and answers, not the exam itself."
-        f"Number the answers in abc format")
+        )
         
     if len(current_questions)>0:
         prompt += f"The questions should not be in {current_questions}"
@@ -71,7 +72,7 @@ def prepare_prompt_variation_question(question: str, number_of_variations: int):
     :return: Prompt to complete
     """
     return (
-        f"Create {number_of_variations} for the following question,"
+        f"Create {number_of_variations} variations for the following question,"
         f"keeping the same meaning in the question, only rephrase it: {question}."
         )
 
@@ -189,7 +190,9 @@ def get_open_questions(content, number_of_open_questions, number_of_variatons) -
     result_questions = []
     i = 0
     if number_of_variatons>0:
+        print(f'Getting {number_of_variatons} variations')
         for question in questions: 
+            print(f'Getting variation for question {question}')
             result_questions.append(get_variations(i, question, number_of_variatons))
             i += 1 
     else: 
@@ -202,7 +205,7 @@ def get_mc_questions(content, number_of_mc_questions, number_of_answers) -> List
     questions = []
     count = 0
     current_questions = []
-    while count!=number_of_mc_questions:
+    while count<number_of_mc_questions:
         number_of_questions = number_of_mc_questions-count
         print(f'Getting {number_of_questions} questions')
         prompt = prepare_prompt_multiple_choice(content, current_questions, number_of_questions, number_of_answers)
@@ -212,7 +215,7 @@ def get_mc_questions(content, number_of_mc_questions, number_of_answers) -> List
         current_questions = list(map(lambda x:x.question, result))
         count = len(questions)
         
-    return questions
+    return questions[:number_of_mc_questions]
 
 
 def get_questions(question_types, question_args) -> List[Question]:
@@ -226,9 +229,11 @@ def get_questions(question_types, question_args) -> List[Question]:
     f = open("data/content.txt", "r")
     content = f.read()
     questions = []
-    if QuestionType.MULTIPLE_CHOICE in question_types: 
+    if QuestionType.MULTIPLE_CHOICE in question_types:
+        print('Generate MC Questions') 
         questions = get_mc_questions(content, question_args['number_of_mc_questions'], question_args['number_of_answers']) 
     if QuestionType.OPEN in question_types: 
+        print('Generate OPEN Questions') 
         questions.extend(get_open_questions(content, question_args['number_of_open_questions'], question_args['number_of_variations']))
     return questions
 

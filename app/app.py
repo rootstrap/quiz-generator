@@ -1,6 +1,6 @@
 import streamlit as st
 
-from app.page import UploadFile, GenerateExamPage, PageEnum, QuestionsPage, ResultsPage
+from app.page import UploadFile, GenerateExamPage, PageEnum
 
 
 @st.cache_resource(ttl=60 * 60 * 24)
@@ -21,14 +21,11 @@ class App:
         self.pages = {
             PageEnum.UPLOAD_FILE: UploadFile(),
             PageEnum.GENERATE_EXAM: GenerateExamPage(),
-            PageEnum.QUESTIONS: QuestionsPage(),
-            PageEnum.RESULTS: ResultsPage()
         }
 
         self.current_page = self.pages[PageEnum.UPLOAD_FILE]
 
-        self._questions = None
-        self._answers = {}
+        self._questions = []
 
     def render(self):
         """
@@ -44,13 +41,8 @@ class App:
     def questions(self, value):
         self._questions = value
 
-    def add_answer(self, question_index: int, answer_index: int):
-        """
-        Add an answer to the answers dictionary
-        :param question_index: index of the question
-        :param answer_index: index of the answer
-        """
-        self._answers[question_index] = answer_index
+    def set_response(self, question_index: int, response):
+        self._questions[question_index].set_response(response)
 
     def get_answer(self, question_index: int):
         """
@@ -58,7 +50,7 @@ class App:
         :param question_index: index of the question
         :return: index of the answer if it exists, None otherwise
         """
-        return self._answers.get(question_index, None)
+        return self._questions[question_index].get_response()
 
     def change_page(self, page: PageEnum):
         """
@@ -74,8 +66,6 @@ class App:
         """
         self._questions = None
         self._answers = {}
-        self.pages[PageEnum.QUESTIONS].number_of_question = 0
-        self.pages[PageEnum.RESULTS].clarifications = {}
         self.current_page = self.pages[PageEnum.GENERATE_EXAM]
 
         st.experimental_rerun()

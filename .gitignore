@@ -3,4 +3,7 @@ venv/
 __pycache__/
 .ipynb_checkpoints/
 mdpdf.log
-
+token.js
+credentials.js
+mdpdf.log
+questions.pdf
