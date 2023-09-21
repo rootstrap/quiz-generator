@@ -4,8 +4,8 @@ from enum import Enum
 
 # class syntax
 class QuestionType(Enum):
-    OPEN = 0
-    MULTIPLE_CHOICE = 1
+    OPEN = 'Open question'
+    MULTIPLE_CHOICE = 'Multiple choice'
 
 
 @dataclass
@@ -40,6 +40,13 @@ class Question:
 
     def get_response(self):
         return self.response
+    
+    def get_markdown(self):
+        markdown = f"{self.question}\n\n " 
+        if self.question_type == QuestionType.MULTIPLE_CHOICE:
+            for answer in self.answers:
+                markdown += f"[ ] {answer}\n\n"      
+        return markdown
 
     def check_response(self):
         if self.question_type==QuestionType.MULTIPLE_CHOICE:

@@ -40,12 +40,13 @@ def prepare_prompt_multiple_choice(text: str, current_questions: list, number_of
     """
     prompt = (f"Create an exam of multiple choice questions with {number_of_questions} "
         f"questions and {number_of_answers} possible answers in each question. "
-        f"Surround the correct question with ** in its original spot. "
-        f"Only generate the questions and answers, not the exam itself."
+        f"Insert the word 'Correct:' before the correct answer in its original spot. "
+        f"ONLY generate the questions and answers, not the exam itself."
+        f"DO NOT use all capitel letters in the unswer unless unless it's an acronym."
         )
         
     if len(current_questions)>0:
-        prompt += f"The questions should not be in {current_questions}"
+        prompt += f"The questions should NOT BE in {current_questions}"
 
     prompt +=  f"The exam should be about the following text {text}."
     return prompt
@@ -99,7 +100,7 @@ def get_correct_answers(answers: List[str]) -> int:
     """
     correct_answers = []
     for index, answer in enumerate(answers):
-        if answer.count("**") > 0:
+        if answer.count("Correct:") > 0:
             correct_answers.append(index)
 
     return correct_answers
@@ -129,7 +130,7 @@ def response_to_questions(response: str) -> List[Question]:
         correct_answers = get_correct_answers(answers)
         if len(correct_answers)>0:
             for c in correct_answers:
-                answers[c] = answers[c].replace("**", "")
+                answers[c] = answers[c].replace("Correct:", "")
                 answers = list(map(lambda answer: answer.strip(), answers))
             questions.append(Question(count, 
                                     question, 
@@ -166,7 +167,7 @@ def get_variations(question_number, question, number_of_variatons) -> Question:
     return Question(question_number, question, QuestionType.OPEN, variations=variations)
 
 
-def get_open_questions(content, number_of_open_questions, number_of_variatons) -> List[Question]:
+def get_open_questions(content, number_of_open_questions, number_of_variatons=0) -> List[Question]:
     prompt = prepare_prompt_open_question(content, number_of_open_questions)
     response = complete_text(prompt)
     custom_functions = [
@@ -228,14 +229,15 @@ def get_questions(question_types, question_args) -> List[Question]:
     """
     f = open("data/content.txt", "r")
     content = f.read()
-    questions = []
+    mc_questions = []
+    open_questions = []
     if QuestionType.MULTIPLE_CHOICE in question_types:
         print('Generate MC Questions') 
-        questions = get_mc_questions(content, question_args['number_of_mc_questions'], question_args['number_of_answers']) 
+        mc_questions = get_mc_questions(content, question_args['number_of_mc_questions'], question_args['number_of_answers']) 
     if QuestionType.OPEN in question_types: 
         print('Generate OPEN Questions') 
-        questions.extend(get_open_questions(content, question_args['number_of_open_questions'], question_args['number_of_variations']))
-    return questions
+        open_questions = get_open_questions(content, question_args['number_of_open_questions'], question_args['number_of_variations'])
+    return mc_questions, open_questions
 
             
 

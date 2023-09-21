@@ -19,7 +19,7 @@ form_service = discovery.build('forms', 'v1', http=creds.authorize(
 # Request body for creating a form
 NEW_FORM = {
     "info": {
-        "title": "Quickstart form",
+        "title": "Exam",
     }
 }
 
@@ -28,18 +28,13 @@ NEW_QUESTION = {
     "requests": [{
         "createItem": {
             "item": {
-                "title": "In what year did the United States land a mission on the moon?",
+                "title": "",
                 "questionItem": {
                     "question": {
                         "required": True,
                         "choiceQuestion": {
                             "type": "RADIO",
-                            "options": [
-                                {"value": "1965"},
-                                {"value": "1967"},
-                                {"value": "1969"},
-                                {"value": "1971"}
-                            ],
+                            "options": [ ],
                             "shuffle": True
                         }
                     }
@@ -51,6 +46,13 @@ NEW_QUESTION = {
         }
     }]
 }
+
+def create_mc_question(question, options):
+    values = []
+    for option in options:
+        values.append({'value': option})
+    
+    NEW_QUESTION['requests'][0]['createItem']['item']['questionItem']['question']['choiceQuestion']['options'] = values
 
 # Creates the initial form
 result = form_service.forms().create(body=NEW_FORM).execute()

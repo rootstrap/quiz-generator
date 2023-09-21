@@ -2,39 +2,12 @@ import os
 import subprocess
 from typing import List
 
-from model.question import Question, QuestionType
-
+from model.question import Question
+import random
+import numpy as np 
 
 TEMP_MD_FILE = "__temp.md"
 TEMP_PDF_FILE = "__temp.pdf"
-
-
-def questions_to_markdown(questions: List[Question]) -> str:
-    """
-    Convert a list of questions to Markdown
-    :param questions: List of questions
-    :return: Markdown string
-    """
-    markdown = ""
-
-    for index, question in enumerate(questions):
-        markdown += f"**{index + 1}. {question.question}**\n\n"
-        if question.question_type == QuestionType.MULTIPLE_CHOICE:
-            for answer in question.answers:
-                markdown += f"- [ ] {answer}\n"
-            if len(question.correct_answers)>0:
-                markdown += f"\nCorrect: {question.answers[question.correct_answers[0]]}"
-                for i in range(1,len(question.correct_answers)):
-                     markdown +=f",{question.answers[i]}"
-                markdown +="\n"
-
-        if question.question_type == QuestionType.OPEN:
-            for variation in question.variations:
-                markdown += f"- [Variation] {variation}\n"
-            
-        markdown += "\n"
-
-    return markdown
 
 
 def markdown_to_pdf(markdown: str, output_file: str):
@@ -49,18 +22,47 @@ def markdown_to_pdf(markdown: str, output_file: str):
     subprocess.run([
         "mdpdf", TEMP_MD_FILE,
         "--output", output_file,
-        "--footer", ",,{page}",
         "--paper", "A4"
     ])
 
     os.remove(TEMP_MD_FILE)
 
 
-def questions_to_pdf(questions: List[Question], output_file: str):
-    """
-    Convert a list of questions to PDF
-    :param questions: List of questions
-    :param output_file: Output file
-    """
-    markdown = questions_to_markdown(questions)
-    markdown_to_pdf(markdown, output_file)
+def generate_markdown(questions: List[Question]):
+    markdown = ''
+    index = 1
+    for question in questions:
+        markdown += f"Question {index}: "
+        markdown += question.get_markdown()
+        markdown+="\n"
+        index +=1 
+    return markdown
+
+def generate_exams(open_questions: List[Question], 
+                   mc_questions: List[Question], 
+                   number_of_mc: int, 
+                   number_of_open: int, 
+                   number_of_exams: int,
+                   output_file):
+    open_q_split = []
+    if len(open_questions)>0:
+        open_q = random.choices(open_questions, k=number_of_open*number_of_exams) # assumption: number of questions small and exams small enough 
+        open_q_split = np.array_split(open_q, number_of_exams)
+    mc_q_split = []
+    if len(mc_questions)> 0:
+        mc_q = random.choices(mc_questions, k=number_of_mc*number_of_exams) # assumption: number of questions small and exams small enough 
+        mc_q_split = np.array_split(mc_q, number_of_exams)
+    
+    content = ''
+    for i in range(0, number_of_exams):
+        questions = []
+        if len(open_q_split)>0:
+            questions.extend(open_q_split[i].tolist())
+        if len(mc_q_split)>0:
+            questions.extend(mc_q_split[i].tolist())
+        random.shuffle(questions)
+        content += f"# Exam {i+1}\n\n"
+        content += generate_markdown(questions)
+    
+    markdown_to_pdf(content, output_file)
+
