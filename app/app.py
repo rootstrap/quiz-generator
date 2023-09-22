@@ -1,6 +1,6 @@
 import streamlit as st
 
-from app.page import UploadFile, GenerateExamPage, PageEnum
+from app.page import UploadFile, ConfigureExam, ConfigureMultipleChoice, PageEnum
 
 
 @st.cache_resource(ttl=60 * 60 * 24)
@@ -20,12 +20,21 @@ class App:
     def __init__(self):
         self.pages = {
             PageEnum.UPLOAD_FILE: UploadFile(),
-            PageEnum.GENERATE_EXAM: GenerateExamPage(),
+            PageEnum.CONFIGURE_EXAM: ConfigureExam(),
+            PageEnum.CONFIGURE_MULTIPLE_CHOICE: ConfigureMultipleChoice(),
         }
 
         self.current_page = self.pages[PageEnum.UPLOAD_FILE]
 
-        self._questions = []
+        self._open_questions = []
+        self._mc_questions = []
+        self._question_args = {'number_of_open_questions': 0,  
+                               'number_of_variations': 0, 
+                               'number_of_open_questions_exam':0,
+                               'number_of_mc_questions':0,
+                               'number_of_mc_questions_exam': 0,
+                               'number_of_answers':0,
+                               }
 
     def render(self):
         """
@@ -34,15 +43,30 @@ class App:
         self.current_page.render(self)
 
     @property
-    def questions(self):
-        return self._questions
+    def open_questions(self):
+        return self._open_questions
+    
+    @property
+    def mc_questions(self):
+        return self._mc_questions
+    
+    @property
+    def question_args(self):
+        return self._question_args
 
-    @questions.setter
-    def questions(self, value):
-        self._questions = value
+    @open_questions.setter
+    def open_questions(self, value):
+        self._open_questions = value
+
+    @mc_questions.setter
+    def mc_questions(self, value):
+        self._mc_questions = value
+
+    def set_question_args(self, key, value):
+        self._question_args[key] = value
 
     def set_response(self, question_index: int, response):
-        self._questions[question_index].set_response(response)
+        self._mc_questions[question_index].set_response(response)
 
     def get_answer(self, question_index: int):
         """
@@ -50,7 +74,7 @@ class App:
         :param question_index: index of the question
         :return: index of the answer if it exists, None otherwise
         """
-        return self._questions[question_index].get_response()
+        return self._mc_questions[question_index].get_response()
 
     def change_page(self, page: PageEnum):
         """
@@ -58,14 +82,17 @@ class App:
         :param page: Page to change to
         """
         self.current_page = self.pages[page]
-        st.experimental_rerun()
 
     def reset(self):
         """
         Reset the app
         """
-        self._questions = None
-        self._answers = {}
-        self.current_page = self.pages[PageEnum.GENERATE_EXAM]
-
-        st.experimental_rerun()
+        self._open_questions = []
+        self._mc_questions = []
+        self._question_args = {'number_of_open_questions': 0,  
+                               'number_of_variations': 0, 
+                               'number_of_open_questions_exam':0,
+                               'number_of_mc_questions':0,
+                               'number_of_mc_questions_exam': 0,
+                               'number_of_answers':0,
+                               }

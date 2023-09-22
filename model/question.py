@@ -42,10 +42,11 @@ class Question:
         return self.response
     
     def get_markdown(self):
+        options = ['A', 'B', 'C', 'D', 'E', 'F']
         markdown = f"{self.question}\n\n " 
         if self.question_type == QuestionType.MULTIPLE_CHOICE:
-            for answer in self.answers:
-                markdown += f"[ ] {answer}\n\n"      
+            for i in range(0,len(self.answers)):
+                markdown += f"{options[i]}. {self.answers[i]}\n\n"      
         return markdown
 
     def check_response(self):

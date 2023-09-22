@@ -12,8 +12,6 @@ MODEL = "gpt-3.5-turbo"
 def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> str:
     """
     Complete text using GPT-3.5 Turbo
-    :param prompt: Prompt to complete
-    :return: Completed text
     """
     if function_calling:
         response = openai.ChatCompletion.create(
@@ -33,16 +31,13 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
 def prepare_prompt_multiple_choice(text: str, current_questions: list, number_of_questions: int, number_of_answers: int) -> str:
     """
     Prepare prompt to complete
-    :param topics: Topics to include in the exam
-    :param number_of_questions: Number of questions
-    :param number_of_answers: Number of answers
-    :return: Prompt to complete
     """
     prompt = (f"Create an exam of multiple choice questions with {number_of_questions} "
-        f"questions and {number_of_answers} possible answers in each question. "
+        f"questions and {number_of_answers} different choices for each question. "
+        f"DO NOT duplicate choices within a questions."
         f"Insert the word 'Correct:' before the correct answer in its original spot. "
-        f"ONLY generate the questions and answers, not the exam itself."
-        f"DO NOT use all capitel letters in the unswer unless unless it's an acronym."
+        f"ONLY generate the questions and choices, not the exam itself."
+        f"DO NOT use all capital letters unless unless it's an acronym."
         )
         
     if len(current_questions)>0:
@@ -54,12 +49,9 @@ def prepare_prompt_multiple_choice(text: str, current_questions: list, number_of
 def prepare_prompt_open_question(text: str, number_of_questions: int) -> str:
     """
     Prepare prompt to complete
-    :param topics: Topics to include in the exam
-    :param number_of_questions: Number of questions
-    :return: Prompt to complete
     """
     return (
-        f"Create {number_of_questions} questions for an exam."
+        f"Create {number_of_questions} different questions for an exam."
         f"Only generate the questions, not the exam itself."
         f"Separate de questions with \n."
         f"The exam should be about the following text {text}."
@@ -106,14 +98,13 @@ def get_correct_answers(answers: List[str]) -> int:
     return correct_answers
 
 
-def response_to_questions(response: str) -> List[Question]:
+def response_to_mc_questions(response: str, count) -> List[Question]:
     """
     Convert the response from the API to a list of questions
     :param response: Response to convert
     :return: List of questions
     """
     questions = []
-    count = 1
 
     for question_text in response.split("\n\n"):
 
@@ -126,12 +117,17 @@ def response_to_questions(response: str) -> List[Question]:
 
         question = sanitize_line(question_lines[0], is_question=True)
         answers = list(map(lambda line: sanitize_line(line, is_question=False), question_lines[1:]))
-
         correct_answers = get_correct_answers(answers)
+        
         if len(correct_answers)>0:
             for c in correct_answers:
                 answers[c] = answers[c].replace("Correct:", "")
-                answers = list(map(lambda answer: answer.strip(), answers))
+            
+            answers = list(map(lambda answer: answer.strip(), answers))
+            #if len(set(answers)) != len(answers):
+            #    print(f'duplicated options for question {question}')
+            #    print(answers)
+            #    continue
             questions.append(Question(count, 
                                     question, 
                                     QuestionType.MULTIPLE_CHOICE, 
@@ -168,6 +164,8 @@ def get_variations(question_number, question, number_of_variatons) -> Question:
 
 
 def get_open_questions(content, number_of_open_questions, number_of_variatons=0) -> List[Question]:
+    if (number_of_open_questions==0):
+        return []
     prompt = prepare_prompt_open_question(content, number_of_open_questions)
     response = complete_text(prompt)
     custom_functions = [
@@ -206,40 +204,36 @@ def get_mc_questions(content, number_of_mc_questions, number_of_answers) -> List
     questions = []
     count = 0
     current_questions = []
+    if (number_of_mc_questions==0):
+        return []
     while count<number_of_mc_questions:
         number_of_questions = number_of_mc_questions-count
-        print(f'Getting {number_of_questions} questions')
         prompt = prepare_prompt_multiple_choice(content, current_questions, number_of_questions, number_of_answers)
         response = complete_text(prompt)
-        result = response_to_questions(response)
+        result = response_to_mc_questions(response, count)
+        if len(result)==0:
+            continue
         questions.extend(result)
         current_questions = list(map(lambda x:x.question, result))
         count = len(questions)
-        
-    return questions[:number_of_mc_questions]
+    
+    questions = questions[:number_of_mc_questions]
 
+    #put at the end 
+    for question in questions:
+        if 'None of the above' in question.answers:
+            print('None of the above')
+            question.answers.remove('None of the above')
+            question.answers.append('None of the above')
 
-def get_questions(question_types, question_args) -> List[Question]:
-    """
-    Get questions from OpenAI API
-    :param topics: Topics to include in the exam
-    :param number_of_questions: Number of questions
-    :param number_of_answers: Number of answers
-    :return: List of questions
-    """
-    f = open("data/content.txt", "r")
-    content = f.read()
-    mc_questions = []
-    open_questions = []
-    if QuestionType.MULTIPLE_CHOICE in question_types:
-        print('Generate MC Questions') 
-        mc_questions = get_mc_questions(content, question_args['number_of_mc_questions'], question_args['number_of_answers']) 
-    if QuestionType.OPEN in question_types: 
-        print('Generate OPEN Questions') 
-        open_questions = get_open_questions(content, question_args['number_of_open_questions'], question_args['number_of_variations'])
-    return mc_questions, open_questions
+        if 'All of the above' in question.answers:
+            print('All of the above')
+            question.answers.remove('All of the above')
+            question.answers.append('All of the above')
+      
 
-            
+    return questions
+
 
 
 def clarify_question(question: Question) -> str:

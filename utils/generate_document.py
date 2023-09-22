@@ -39,30 +39,22 @@ def generate_markdown(questions: List[Question]):
     return markdown
 
 def generate_exams(open_questions: List[Question], 
-                   mc_questions: List[Question], 
-                   number_of_mc: int, 
                    number_of_open: int, 
                    number_of_exams: int,
                    output_file):
     open_q_split = []
     if len(open_questions)>0:
-        open_q = random.choices(open_questions, k=number_of_open*number_of_exams) # assumption: number of questions small and exams small enough 
+        open_q = open_questions[:number_of_open*number_of_exams] # assumption: number of questions small and exams small enough 
         open_q_split = np.array_split(open_q, number_of_exams)
-    mc_q_split = []
-    if len(mc_questions)> 0:
-        mc_q = random.choices(mc_questions, k=number_of_mc*number_of_exams) # assumption: number of questions small and exams small enough 
-        mc_q_split = np.array_split(mc_q, number_of_exams)
+   
     
     content = ''
     for i in range(0, number_of_exams):
-        questions = []
-        if len(open_q_split)>0:
-            questions.extend(open_q_split[i].tolist())
-        if len(mc_q_split)>0:
-            questions.extend(mc_q_split[i].tolist())
-        random.shuffle(questions)
+        
         content += f"# Exam {i+1}\n\n"
-        content += generate_markdown(questions)
-    
+        if len(open_q_split)>0:
+            content += generate_markdown(open_q_split[i].tolist())
+            content += '\n'
+        
     markdown_to_pdf(content, output_file)
 
