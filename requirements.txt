@@ -1,4 +1,5 @@
-openai
 mdpdf
+openai
+python-dotenv
 streamlit
 watchdog

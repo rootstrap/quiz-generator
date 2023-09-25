@@ -66,6 +66,10 @@ To obtain the necessary API key and organization from OpenAI, follow these steps
 You now have the API key and organization ID required for the Exam Generator.
 
 
+## Setting Secrets
+
+Create a `.env` file in the root dir of the project and add an `OPENAI_API_KEY` variable with your generated API key.
+
 ## Executing the App
 
 After installing dependencies and setting secrets, execute the Exam Generator app by running:

@@ -1,12 +1,15 @@
+import os
 from typing import List
 from model.question import QuestionType
 import openai
 import re
+from dotenv import load_dotenv
 import json
 
 from model.question import Question
 
-MODEL = "gpt-3.5-turbo"
+load_dotenv()
+MODEL = os.getenv("MODEL", "gpt-3.5-turbo")
 
 
 def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> str:
@@ -15,7 +18,7 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
     """
     if function_calling:
         response = openai.ChatCompletion.create(
-            model = 'gpt-3.5-turbo',
+            model = MODEL,
             messages = [{'role': 'user', 'content': prompt}],
             functions = custom_functions,
             function_call = 'auto'
