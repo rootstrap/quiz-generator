@@ -30,7 +30,7 @@ git clone https://github.com/rootstrap/quiz-generator.git
 2. Change to the project directory:
 
 ```
-cd exam-generator
+cd quiz-generator
 ```
 
 3. Create a virtual environment and activate it:
@@ -43,8 +43,8 @@ source venv/bin/activate
 Alternatively, you can use `conda` to create a virtual environment:
 
 ```
-conda create -n exam-generator python=3.9
-conda activate exam-generator
+conda create -n quiz-generator python=3.9
+conda activate quiz-generator
 ```
 
 4. Install the required packages from `requirements.txt`:
