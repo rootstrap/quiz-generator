@@ -24,7 +24,7 @@ To use the Exam Generator, you need the following:
 1. Clone the repository to your local machine:
 
 ```
-git clone https://github.com/alexfdez1010/exam-generator.git
+git clone https://github.com/rootstrap/quiz-generator.git
 ```
 
 2. Change to the project directory:
