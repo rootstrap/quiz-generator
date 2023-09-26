@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import List
 from enum import Enum
+from typing import List
+
 
 # class syntax
 class QuestionType(Enum):
-    OPEN = 'Open question'
-    MULTIPLE_CHOICE = 'Multiple choice'
+    OPEN = "Open question"
+    MULTIPLE_CHOICE = "Multiple choice"
 
 
 @dataclass
@@ -17,16 +18,18 @@ class Question:
     - id: Question ID
     - question: Question text
     - answers: List of answers
-    - correct_answers: List of correct answers 
+    - correct_answers: List of correct answers
     """
 
-    def __init__(self, 
-                 id:int, 
-                 question: str, 
-                 question_type: QuestionType, 
-                 variations:List[str] = [], 
-                 answers: List[str]=[], 
-                 correct_answers: List[int]=[]):
+    def __init__(
+        self,
+        id: int,
+        question: str,
+        question_type: QuestionType,
+        variations: List[str] = [],
+        answers: List[str] = [],
+        correct_answers: List[int] = [],
+    ):
         self.id = id
         self.question = question
         self.question_type = question_type
@@ -40,18 +43,18 @@ class Question:
 
     def get_response(self):
         return self.response
-    
+
     def get_markdown(self):
-        options = ['A', 'B', 'C', 'D', 'E', 'F']
-        markdown = f"{self.question}\n\n " 
+        options = ["A", "B", "C", "D", "E", "F"]
+        markdown = f"{self.question}\n\n "
         if self.question_type == QuestionType.MULTIPLE_CHOICE:
-            for i in range(0,len(self.answers)):
-                markdown += f"{options[i]}. {self.answers[i]}\n\n"      
+            for i in range(0, len(self.answers)):
+                markdown += f"{options[i]}. {self.answers[i]}\n\n"
         return markdown
 
     def check_response(self):
-        if self.question_type==QuestionType.MULTIPLE_CHOICE:
-            if len(self.response)==len(self.correct_answers):
+        if self.question_type == QuestionType.MULTIPLE_CHOICE:
+            if len(self.response) == len(self.correct_answers):
                 for r in self.response:
                     if r not in self.correct_answers:
                         return False
@@ -59,4 +62,4 @@ class Question:
             else:
                 return False
         else:
-            return False    
+            return False

@@ -1,11 +1,14 @@
+import os
+
 import openai
 import streamlit as st
-import os
+
 from app.app import get_app
 
 # Applying our API key and organization ID to OpenAI
-OPENAI_ORG = os.getenv('ORGANIZATION_ID')
-OPENAI_TOKEN = os.getenv('OPENAI_API_KEY')
+OPENAI_ORG = os.getenv("ORGANIZATION_ID")
+OPENAI_TOKEN = os.getenv("OPENAI_API_KEY")
+
 
 def initial_config():
     """
@@ -27,5 +30,5 @@ def main():
     app.render()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

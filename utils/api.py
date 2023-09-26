@@ -1,12 +1,15 @@
-import os
-from typing import List
-from model.question import QuestionType
-import openai
-import re
-from dotenv import load_dotenv
 import json
+import os
+import re
+from typing import List
 
-from model.question import Question
+import openai
+from dotenv import load_dotenv
+
+from model.question import Question, QuestionType
+from utils.prompts import (prepare_prompt_multiple_choice,
+                           prepare_prompt_open_question,
+                           prepare_prompt_variation_question)
 
 load_dotenv()
 MODEL = os.getenv("MODEL", "gpt-3.5-turbo")
@@ -18,59 +21,19 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
     """
     if function_calling:
         response = openai.ChatCompletion.create(
-            model = MODEL,
-            messages = [{'role': 'user', 'content': prompt}],
-            functions = custom_functions,
-            function_call = 'auto'
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            functions=custom_functions,
+            function_call="auto",
         )
-        return json.loads(response['choices'][0]['message']['function_call']['arguments'])
+        return json.loads(
+            response["choices"][0]["message"]["function_call"]["arguments"]
+        )
     else:
         messages = [{"role": "user", "content": prompt}]
         response = openai.ChatCompletion.create(model=MODEL, messages=messages)
         return response["choices"][0]["message"]["content"]
 
-    
-
-def prepare_prompt_multiple_choice(text: str, current_questions: list, number_of_questions: int, number_of_answers: int) -> str:
-    """
-    Prepare prompt to complete
-    """
-    prompt = (f"Create an exam of multiple choice questions with {number_of_questions} "
-        f"questions and {number_of_answers} different choices for each question. "
-        f"DO NOT duplicate choices within a questions."
-        f"Insert the word 'Correct:' before the correct answer in its original spot. "
-        f"ONLY generate the questions and choices, not the exam itself."
-        f"DO NOT use all capital letters unless unless it's an acronym."
-        )
-        
-    if len(current_questions)>0:
-        prompt += f"The questions should NOT BE in {current_questions}"
-
-    prompt +=  f"The exam should be about the following text {text}."
-    return prompt
-
-def prepare_prompt_open_question(text: str, number_of_questions: int) -> str:
-    """
-    Prepare prompt to complete
-    """
-    return (
-        f"Create {number_of_questions} different questions for an exam."
-        f"Only generate the questions, not the exam itself."
-        f"Separate de questions with \n."
-        f"The exam should be about the following text {text}."
-    )
-
-def prepare_prompt_variation_question(question: str, number_of_variations: int):
-    """
-    Prepare prompt to complete
-    :param question: Question that we want to create variations for 
-    :param number_of_variations: Number of variations for the question 
-    :return: Prompt to complete
-    """
-    return (
-        f"Create {number_of_variations} variations for the following question,"
-        f"keeping the same meaning in the question, only rephrase it: {question}."
-        )
 
 def sanitize_line(line: str, is_question: bool) -> str:
     """
@@ -110,7 +73,6 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
     questions = []
 
     for question_text in response.split("\n\n"):
-
         question_text = question_text.strip()
 
         if not question_text:
@@ -119,38 +81,44 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
         question_lines = question_text.splitlines()
 
         question = sanitize_line(question_lines[0], is_question=True)
-        answers = list(map(lambda line: sanitize_line(line, is_question=False), question_lines[1:]))
+        answers = list(
+            map(lambda line: sanitize_line(line, is_question=False), question_lines[1:])
+        )
         correct_answers = get_correct_answers(answers)
-        
-        if len(correct_answers)>0:
+
+        if len(correct_answers) > 0:
             for c in correct_answers:
                 answers[c] = answers[c].replace("Correct:", "")
-            
+
             answers = list(map(lambda answer: answer.strip(), answers))
-            #if len(set(answers)) != len(answers):
+            # if len(set(answers)) != len(answers):
             #    print(f'duplicated options for question {question}')
             #    print(answers)
             #    continue
-            questions.append(Question(count, 
-                                    question, 
-                                    QuestionType.MULTIPLE_CHOICE, 
-                                    answers=answers, 
-                                    correct_answers=correct_answers)
-                            )
+            questions.append(
+                Question(
+                    count,
+                    question,
+                    QuestionType.MULTIPLE_CHOICE,
+                    answers=answers,
+                    correct_answers=correct_answers,
+                )
+            )
 
             count += 1
 
     return questions
+
 
 def get_variations(question_number, question, number_of_variatons) -> Question:
     prompt = prepare_prompt_variation_question(question, number_of_variatons)
     response = complete_text(prompt, False)
     custom_functions = [
         {
-            'name': 'extract_questions',
-            'description': 'Get the questions as a array (without the question number) from the body of the input text',
-            'parameters': {
-                'type': 'object',
+            "name": "extract_questions",
+            "description": "Get the questions as a array (without the question number) from the body of the input text",
+            "parameters": {
+                "type": "object",
                 "properties": {
                     "questions": {
                         "type": "string",
@@ -158,25 +126,27 @@ def get_variations(question_number, question, number_of_variatons) -> Question:
                     }
                 },
                 "required": ["questions"],
-            }
+            },
         }
     ]
     response = complete_text(response, True, custom_functions)
-    variations = response['questions'].split('#')
+    variations = response["questions"].split("#")
     return Question(question_number, question, QuestionType.OPEN, variations=variations)
 
 
-def get_open_questions(content, number_of_open_questions, number_of_variatons=0) -> List[Question]:
-    if (number_of_open_questions==0):
+def get_open_questions(
+    content, number_of_open_questions, number_of_variatons=0
+) -> List[Question]:
+    if number_of_open_questions == 0:
         return []
     prompt = prepare_prompt_open_question(content, number_of_open_questions)
     response = complete_text(prompt)
     custom_functions = [
         {
-            'name': 'extract_questions',
-            'description': 'Get the questions as a array (without the question number) from the body of the input text',
-            'parameters': {
-                'type': 'object',
+            "name": "extract_questions",
+            "description": "Get the questions as a array (without the question number) from the body of the input text",
+            "parameters": {
+                "type": "object",
                 "properties": {
                     "questions": {
                         "type": "string",
@@ -184,59 +154,62 @@ def get_open_questions(content, number_of_open_questions, number_of_variatons=0)
                     }
                 },
                 "required": ["questions"],
-            }
+            },
         }
     ]
     response = complete_text(response, True, custom_functions)
-    questions = response['questions'].split('#')
+    questions = response["questions"].split("#")
     result_questions = []
     i = 0
-    if number_of_variatons>0:
-        print(f'Getting {number_of_variatons} variations')
-        for question in questions: 
-            print(f'Getting variation for question {question}')
+    if number_of_variatons > 0:
+        print(f"Getting {number_of_variatons} variations")
+        for question in questions:
+            print(f"Getting variation for question {question}")
             result_questions.append(get_variations(i, question, number_of_variatons))
-            i += 1 
-    else: 
+            i += 1
+    else:
         for question in questions:
             result_questions.append(Question(i, question, QuestionType.OPEN))
-            i += 1 
+            i += 1
     return result_questions
 
-def get_mc_questions(content, number_of_mc_questions, number_of_answers) -> List[Question]:
+
+def get_mc_questions(
+    content, number_of_mc_questions, number_of_answers
+) -> List[Question]:
     questions = []
     count = 0
     current_questions = []
-    if (number_of_mc_questions==0):
+    if number_of_mc_questions == 0:
         return []
-    while count<number_of_mc_questions:
-        number_of_questions = number_of_mc_questions-count
-        prompt = prepare_prompt_multiple_choice(content, current_questions, number_of_questions, number_of_answers)
+    while count < number_of_mc_questions:
+        number_of_questions = number_of_mc_questions - count
+        prompt = prepare_prompt_multiple_choice(
+            content, current_questions, number_of_questions, number_of_answers
+        )
         response = complete_text(prompt)
         result = response_to_mc_questions(response, count)
-        if len(result)==0:
+        if len(result) == 0:
             continue
         questions.extend(result)
-        current_questions = list(map(lambda x:x.question, result))
+        current_questions = list(map(lambda x: x.question, result))
         count = len(questions)
-    
+
     questions = questions[:number_of_mc_questions]
 
-    #put at the end 
+    # put at the end
     for question in questions:
-        if 'None of the above' in question.answers:
-            print('None of the above')
-            question.answers.remove('None of the above')
-            question.answers.append('None of the above')
+        if "None of the above" in question.answers:
+            print("None of the above")
+            question.answers.remove("None of the above")
+            question.answers.append("None of the above")
 
-        if 'All of the above' in question.answers:
-            print('All of the above')
-            question.answers.remove('All of the above')
-            question.answers.append('All of the above')
-      
+        if "All of the above" in question.answers:
+            print("All of the above")
+            question.answers.remove("All of the above")
+            question.answers.append("All of the above")
 
     return questions
-
 
 
 def clarify_question(question: Question) -> str:
@@ -245,10 +218,14 @@ def clarify_question(question: Question) -> str:
     :param question: Question to clarify
     :return: Text clarifying the question
     """
-    join_questions = "\n".join([f"{chr(ord('a') + i)}. {answer}" for i, answer in enumerate(question.answers)])
+    join_questions = "\n".join(
+        [f"{chr(ord('a') + i)}. {answer}" for i, answer in enumerate(question.answers)]
+    )
 
     prompt = f"Given this question: {question.question}\n"
     prompt += f" and these answers: {join_questions}\n\n"
-    prompt += f"Why the correct answer is {chr(ord('a') + question.correct_answers)}?\n\n"
+    prompt += (
+        f"Why the correct answer is {chr(ord('a') + question.correct_answers)}?\n\n"
+    )
 
     return complete_text(prompt)

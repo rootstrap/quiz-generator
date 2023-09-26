@@ -1,6 +1,7 @@
 import streamlit as st
 
-from app.page import UploadFile, ConfigureExam, ConfigureMultipleChoice, PageEnum
+from app.page import (ConfigureExam, ConfigureMultipleChoice, PageEnum,
+                      UploadFile)
 
 
 @st.cache_resource(ttl=60 * 60 * 24)
@@ -25,16 +26,7 @@ class App:
         }
 
         self.current_page = self.pages[PageEnum.UPLOAD_FILE]
-
-        self._open_questions = []
-        self._mc_questions = []
-        self._question_args = {'number_of_open_questions': 0,  
-                               'number_of_variations': 0, 
-                               'number_of_open_questions_exam':0,
-                               'number_of_mc_questions':0,
-                               'number_of_mc_questions_exam': 0,
-                               'number_of_answers':0,
-                               }
+        self.reset()
 
     def render(self):
         """
@@ -45,11 +37,11 @@ class App:
     @property
     def open_questions(self):
         return self._open_questions
-    
+
     @property
     def mc_questions(self):
         return self._mc_questions
-    
+
     @property
     def question_args(self):
         return self._question_args
@@ -89,10 +81,11 @@ class App:
         """
         self._open_questions = []
         self._mc_questions = []
-        self._question_args = {'number_of_open_questions': 0,  
-                               'number_of_variations': 0, 
-                               'number_of_open_questions_exam':0,
-                               'number_of_mc_questions':0,
-                               'number_of_mc_questions_exam': 0,
-                               'number_of_answers':0,
-                               }
+        self._question_args = {
+            "number_of_open_questions": 0,
+            "number_of_variations": 0,
+            "number_of_open_questions_exam": 0,
+            "number_of_mc_questions": 0,
+            "number_of_mc_questions_exam": 0,
+            "number_of_answers": 0,
+        }
