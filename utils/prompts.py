@@ -56,7 +56,9 @@ def prepare_prompt_open_question(text: str, number_of_questions: int) -> str:
     :param number_of_questions: number of open questions we want
     :return: Prompt
     """
-    return prompt_open_question.format(number_of_questions, text)
+    return prompt_open_question.format(
+        number_of_questions=number_of_questions, text=text
+    )
 
 
 def prepare_prompt_variation_question(question: str, number_of_variations: int):

@@ -1,3 +1,4 @@
+langchain
 mdpdf
 openai
 python-dotenv

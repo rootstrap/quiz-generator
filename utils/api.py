@@ -1,38 +1,12 @@
 import json
-import os
 import re
 from typing import List
 
-import openai
-from dotenv import load_dotenv
-
 from model.question import Question, QuestionType
+from utils.agent import complete_text
 from utils.prompts import (prepare_prompt_multiple_choice,
                            prepare_prompt_open_question,
                            prepare_prompt_variation_question)
-
-load_dotenv()
-MODEL = os.getenv("MODEL", "gpt-3.5-turbo")
-
-
-def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> str:
-    """
-    Complete text using GPT-3.5 Turbo
-    """
-    if function_calling:
-        response = openai.ChatCompletion.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            functions=custom_functions,
-            function_call="auto",
-        )
-        return json.loads(
-            response["choices"][0]["message"]["function_call"]["arguments"]
-        )
-    else:
-        messages = [{"role": "user", "content": prompt}]
-        response = openai.ChatCompletion.create(model=MODEL, messages=messages)
-        return response["choices"][0]["message"]["content"]
 
 
 def sanitize_line(line: str, is_question: bool) -> str:
@@ -110,10 +84,8 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
     return questions
 
 
-def get_variations(question_number, question, number_of_variatons) -> Question:
-    prompt = prepare_prompt_variation_question(question, number_of_variatons)
-    response = complete_text(prompt, False)
-    custom_functions = [
+def open_questions_func_definition() -> str:
+    return [
         {
             "name": "extract_questions",
             "description": "Get the questions as a array (without the question number) from the body of the input text",
@@ -129,8 +101,14 @@ def get_variations(question_number, question, number_of_variatons) -> Question:
             },
         }
     ]
+
+
+def get_variations(question_number, question, number_of_variatons) -> Question:
+    prompt = prepare_prompt_variation_question(question, number_of_variatons)
+    response = complete_text(prompt, False)
+    custom_functions = open_questions_func_definition()
     response = complete_text(response, True, custom_functions)
-    variations = response["questions"].split("#")
+    variations = json.loads(response["arguments"])["questions"].split("#")
     return Question(question_number, question, QuestionType.OPEN, variations=variations)
 
 
@@ -141,24 +119,9 @@ def get_open_questions(
         return []
     prompt = prepare_prompt_open_question(content, number_of_open_questions)
     response = complete_text(prompt)
-    custom_functions = [
-        {
-            "name": "extract_questions",
-            "description": "Get the questions as a array (without the question number) from the body of the input text",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "questions": {
-                        "type": "string",
-                        "description": "The list of questions WITHOUT the question number, WITHOUT newline, SEPARATED by #",
-                    }
-                },
-                "required": ["questions"],
-            },
-        }
-    ]
+    custom_functions = open_questions_func_definition()
     response = complete_text(response, True, custom_functions)
-    questions = response["questions"].split("#")
+    questions = json.loads(response["arguments"])["questions"].split("#")
     result_questions = []
     i = 0
     if number_of_variatons > 0:
