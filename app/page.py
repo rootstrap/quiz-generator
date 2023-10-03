@@ -1,11 +1,9 @@
 from abc import abstractmethod
-from typing import Optional
 
-import numpy as np
 import streamlit as st
 
-from utils.api import get_open_questions
-from utils.generate_document import generate_exams
+from src.api import get_open_questions
+from src.generate_document import generate_exams
 
 
 class PageEnum:

@@ -26,6 +26,25 @@ prompt_variation_question = (
 )
 
 
+def open_questions_func_definition() -> str:
+    return [
+        {
+            "name": "process_questions",
+            "description": "Get a list of exam questions separated by #.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "questions": {
+                        "type": "string",
+                        "description": "The list of questions separated by this character: #. WITHOUT the question number, WITHOUT newline.",
+                    }
+                },
+                "required": ["questions"],
+            },
+        }
+    ]
+
+
 def prepare_prompt_multiple_choice(
     text: str, current_questions: list, number_of_questions: int, number_of_answers: int
 ) -> str:

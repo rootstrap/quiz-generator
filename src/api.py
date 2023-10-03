@@ -1,41 +1,13 @@
 import json
-import re
 from typing import List
 
 from model.question import Question, QuestionType
-from utils.agent import complete_text
-from utils.prompts import (prepare_prompt_multiple_choice,
-                           prepare_prompt_open_question,
-                           prepare_prompt_variation_question)
-
-
-def sanitize_line(line: str, is_question: bool) -> str:
-    """
-    Sanitize a line from the response
-    :param line: Line to sanitize
-    :param is_question: Whether the line is a question or an answer
-    :return: Sanitized line
-    """
-    if is_question:
-        new_line = re.sub(r"[0-9]+.", " ", line, count=1)
-    else:
-        new_line = re.sub(r"[a-eA-E][).]", " ", line, count=1)
-
-    return new_line
-
-
-def get_correct_answers(answers: List[str]) -> int:
-    """
-    Return the index of the correct answer
-    :param answers: List of answers
-    :return: Index of the correct answer if found, -1 otherwise
-    """
-    correct_answers = []
-    for index, answer in enumerate(answers):
-        if answer.count("Correct:") > 0:
-            correct_answers.append(index)
-
-    return correct_answers
+from src.agent import complete_text
+from src.prompts import (open_questions_func_definition,
+                         prepare_prompt_multiple_choice,
+                         prepare_prompt_open_question,
+                         prepare_prompt_variation_question)
+from src.utils import get_correct_answers, sanitize_line
 
 
 def response_to_mc_questions(response: str, count) -> List[Question]:
@@ -82,25 +54,6 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
             count += 1
 
     return questions
-
-
-def open_questions_func_definition() -> str:
-    return [
-        {
-            "name": "process_questions",
-            "description": "Get a list of exam questions separated by #.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "questions": {
-                        "type": "string",
-                        "description": "The list of questions separated by this character: #. WITHOUT the question number, WITHOUT newline.",
-                    }
-                },
-                "required": ["questions"],
-            },
-        }
-    ]
 
 
 def get_variations(question_number, question, number_of_variatons) -> Question:

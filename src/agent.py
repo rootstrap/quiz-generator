@@ -1,6 +1,6 @@
 from langchain.schema import HumanMessage
 
-from utils.llm import llm
+from src.llm import llm
 
 
 def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> str:
@@ -9,9 +9,11 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
     """
     messages = [HumanMessage(content=prompt)]
     if function_calling:
-        response = llm(messages, functions=custom_functions, function_call={"name": custom_functions[0]['name']},).additional_kwargs[
-            "function_call"
-        ]
+        response = llm(
+            messages,
+            functions=custom_functions,
+            function_call={"name": custom_functions[0]["name"]},
+        ).additional_kwargs["function_call"]
     else:
         response = llm(messages).content
     return response
