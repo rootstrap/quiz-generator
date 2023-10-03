@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 import streamlit as st
 
+from config.cfg import CONTENT_FILEPATH
 from src.api import get_open_questions
 from src.generate_document import generate_exams
 
@@ -30,9 +31,9 @@ class UploadFile(Page):
         st.markdown(
             """Generate a quiz automatically from the content of your the course"""
         )
-        uploaded_file = st.file_uploader("Upload text file")
+        uploaded_file = st.file_uploader("Upload pdf file")
         if uploaded_file is not None:
-            f = open("data/content.txt", "w")
+            f = open(CONTENT_FILEPATH, "w")
             f.write(uploaded_file.getvalue().decode("utf-8"))
             f.close()
 
@@ -102,7 +103,7 @@ class ConfigureExam(Page):
                 else:
                     with st.spinner("Generating questions. This may take a while..."):
                         try:
-                            f = open("data/content.txt", "r")
+                            f = open(CONTENT_FILEPATH, "r")
                             content = f.read()
                             # app.mc_questions = get_mc_questions(content,
                             #            app.question_args['number_of_mc_questions'],
@@ -123,19 +124,20 @@ class ConfigureExam(Page):
                             "The exams have been generated. You can download the questions as a PDF"
                         )
 
+                        output_filename = "exams.pdf"
                         generate_exams(
                             open_questions=app.open_questions,
                             number_of_open=app.question_args[
                                 "number_of_open_questions_exam"
                             ],
                             number_of_exams=app.question_args["number_of_exams"],
-                            output_file="exams.pdf",
+                            output_file=output_filename,
                         )
 
                         st.download_button(
                             "Download",
-                            data=open("exams.pdf", "rb").read(),
-                            file_name="exams.pdf",
+                            data=open(output_filename, "rb").read(),
+                            file_name=output_filename,
                             mime="application/pdf",
                             help="Download the exams as a PDF file",
                         )
