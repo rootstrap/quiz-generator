@@ -9,7 +9,7 @@ def complete_text(prompt: str, function_calling=False, custom_functions=[]) -> s
     """
     messages = [HumanMessage(content=prompt)]
     if function_calling:
-        response = llm(messages, functions=custom_functions).additional_kwargs[
+        response = llm(messages, functions=custom_functions, function_call={"name": custom_functions[0]['name']},).additional_kwargs[
             "function_call"
         ]
     else:

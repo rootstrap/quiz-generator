@@ -15,9 +15,9 @@ prompt_multiple_choice = (
 
 prompt_open_question = (
     "Create {number_of_questions} different questions for an exam."
-    "Only generate the questions, not the exam itself."
-    "Separate de questions with '\n'"
-    "The exam should be about the following text: {text}."
+    "Only generate the list of questions, not the exam itself."
+    "The exam questions should be about the following text: {text}."
+    "Separate de questions with this character: #"
 )
 
 prompt_variation_question = (

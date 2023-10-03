@@ -87,14 +87,14 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
 def open_questions_func_definition() -> str:
     return [
         {
-            "name": "extract_questions",
-            "description": "Get the questions as a array (without the question number) from the body of the input text",
+            "name": "process_questions",
+            "description": "Get a list of exam questions separated by #.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "questions": {
                         "type": "string",
-                        "description": "The list of questions WITHOUT the question number, WITHOUT newline, SEPARATED by #",
+                        "description": "The list of questions separated by this character: #. WITHOUT the question number, WITHOUT newline.",
                     }
                 },
                 "required": ["questions"],
@@ -118,9 +118,8 @@ def get_open_questions(
     if number_of_open_questions == 0:
         return []
     prompt = prepare_prompt_open_question(content, number_of_open_questions)
-    response = complete_text(prompt)
     custom_functions = open_questions_func_definition()
-    response = complete_text(response, True, custom_functions)
+    response = complete_text(prompt, True, custom_functions)
     questions = json.loads(response["arguments"])["questions"].split("#")
     result_questions = []
     i = 0
