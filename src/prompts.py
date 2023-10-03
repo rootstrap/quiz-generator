@@ -16,8 +16,10 @@ prompt_multiple_choice = (
 prompt_open_question = (
     "Create {number_of_questions} different questions for an exam."
     "Only generate the list of questions, not the exam itself."
+    "The questions must be separated with this character: #"
+    "For example: a question?#another question?#a new question?"
     "The exam questions should be about the following text: {text}."
-    "Separate de questions with this character: #"
+    "Remember to separate de questions with this character: #"
 )
 
 prompt_variation_question = (
@@ -30,13 +32,13 @@ def open_questions_func_definition() -> str:
     return [
         {
             "name": "process_questions",
-            "description": "Get a list of exam questions separated by #.",
+            "description": "Get a list of exam questions separated by this character: #. And then process them.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "questions": {
                         "type": "string",
-                        "description": "The list of questions separated by this character: #. WITHOUT the question number, WITHOUT newline.",
+                        "description": "The list of questions that must be separated by this character: #. WITHOUT the question number, WITHOUT newline.",
                     }
                 },
                 "required": ["questions"],
