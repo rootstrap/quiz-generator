@@ -3,14 +3,29 @@ from typing import List
 
 from model.question import Question, QuestionType
 from src.agent import complete_text
+from src.loader import load_and_split_doc
 from src.prompts import (open_questions_func_definition,
                          prepare_prompt_multiple_choice,
                          prepare_prompt_open_question,
                          prepare_prompt_variation_question)
-from src.utils import get_correct_answers, sanitize_line
+from src.utils import sanitize_line
 
 
-def response_to_mc_questions(response: str, count) -> List[Question]:
+def _get_correct_answers(answers: List[str]) -> int:
+    """
+    Return the index of the correct answer
+    :param answers: List of answers
+    :return: Index of the correct answer if found, -1 otherwise
+    """
+    correct_answers = []
+    for index, answer in enumerate(answers):
+        if answer.count("Correct:") > 0:
+            correct_answers.append(index)
+
+    return correct_answers
+
+
+def _response_to_mc_questions(response: str, count) -> List[Question]:
     """
     Convert the response from the API to a list of questions
     :param response: Response to convert
@@ -30,7 +45,7 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
         answers = list(
             map(lambda line: sanitize_line(line, is_question=False), question_lines[1:])
         )
-        correct_answers = get_correct_answers(answers)
+        correct_answers = _get_correct_answers(answers)
 
         if len(correct_answers) > 0:
             for c in correct_answers:
@@ -56,36 +71,46 @@ def response_to_mc_questions(response: str, count) -> List[Question]:
     return questions
 
 
-def get_variations(question_number, question, number_of_variatons) -> Question:
-    prompt = prepare_prompt_variation_question(question, number_of_variatons)
+def _get_variations(question, number_of_variations) -> Question:
+    prompt = prepare_prompt_variation_question(question, number_of_variations)
     response = complete_text(prompt, False)
     custom_functions = open_questions_func_definition()
     response = complete_text(response, True, custom_functions)
     variations = json.loads(response["arguments"])["questions"].split("#")
-    return Question(question_number, question, QuestionType.OPEN, variations=variations)
+    return variations
+
+
+def _build_questions(questions, number_of_variations: int) -> List[Question]:
+    result_questions = []
+    i = 0
+    for question in questions:
+        if number_of_variations:
+            variations = _get_variations(question, number_of_variations)
+        else:
+            variations = []
+        q = Question(i, question, QuestionType.OPEN, variations=variations)
+        result_questions.append(q)
+        i += 1
+    return result_questions
 
 
 def get_open_questions(
-    content, number_of_open_questions, number_of_variatons=0
+    number_of_open_questions, number_of_variations=0
 ) -> List[Question]:
     if number_of_open_questions == 0:
         return []
-    prompt = prepare_prompt_open_question(content, number_of_open_questions)
-    custom_functions = open_questions_func_definition()
-    response = complete_text(prompt, True, custom_functions)
-    questions = json.loads(response["arguments"])["questions"].split("#")
-    result_questions = []
-    i = 0
-    if number_of_variatons > 0:
-        print(f"Getting {number_of_variatons} variations")
-        for question in questions:
-            print(f"Getting variation for question {question}")
-            result_questions.append(get_variations(i, question, number_of_variatons))
-            i += 1
-    else:
-        for question in questions:
-            result_questions.append(Question(i, question, QuestionType.OPEN))
-            i += 1
+    texts = load_and_split_doc()
+    questions = []
+    # Create questions from text with llm
+    for content in texts:
+        prompt = prepare_prompt_open_question(content, number_of_open_questions)
+        custom_functions = open_questions_func_definition()
+        response = complete_text(prompt, True, custom_functions)
+        partial_questions = json.loads(response["arguments"])["questions"].split("#")
+        questions += partial_questions
+
+    # Build question objects
+    result_questions = _build_questions(questions, number_of_variations)
     return result_questions
 
 
@@ -103,7 +128,7 @@ def get_mc_questions(
             content, current_questions, number_of_questions, number_of_answers
         )
         response = complete_text(prompt)
-        result = response_to_mc_questions(response, count)
+        result = _response_to_mc_questions(response, count)
         if len(result) == 0:
             continue
         questions.extend(result)

@@ -31,11 +31,11 @@ class UploadFile(Page):
         st.markdown(
             """Generate a quiz automatically from the content of your the course"""
         )
-        uploaded_file = st.file_uploader("Upload pdf file")
+        uploaded_file = st.file_uploader("Upload pdf file", type="pdf")
         if uploaded_file is not None:
-            f = open(CONTENT_FILEPATH, "w")
-            f.write(uploaded_file.getvalue().decode("utf-8"))
-            f.close()
+            with open(CONTENT_FILEPATH, "wb") as f:
+                f.write(uploaded_file.read())
+                f.close()
 
         if st.button("Configure Exam"):
             app.reset()
@@ -103,13 +103,10 @@ class ConfigureExam(Page):
                 else:
                     with st.spinner("Generating questions. This may take a while..."):
                         try:
-                            f = open(CONTENT_FILEPATH, "r")
-                            content = f.read()
                             # app.mc_questions = get_mc_questions(content,
                             #            app.question_args['number_of_mc_questions'],
                             #            app.question_args['number_of_answers'])
                             app.open_questions = get_open_questions(
-                                content,
                                 app.question_args["number_of_open_questions"],
                                 app.question_args["number_of_variations"],
                             )

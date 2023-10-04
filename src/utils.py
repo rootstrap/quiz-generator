@@ -15,17 +15,3 @@ def sanitize_line(line: str, is_question: bool) -> str:
         new_line = re.sub(r"[a-eA-E][).]", " ", line, count=1)
 
     return new_line
-
-
-def get_correct_answers(answers: List[str]) -> int:
-    """
-    Return the index of the correct answer
-    :param answers: List of answers
-    :return: Index of the correct answer if found, -1 otherwise
-    """
-    correct_answers = []
-    for index, answer in enumerate(answers):
-        if answer.count("Correct:") > 0:
-            correct_answers.append(index)
-
-    return correct_answers
