@@ -1,4 +1,5 @@
 import json
+import math
 from typing import List
 
 from model.question import Question, QuestionType
@@ -100,12 +101,13 @@ def get_open_questions(
     if number_of_open_questions == 0:
         return []
     texts = load_and_split_doc()
+    questions_per_page = math.ceil(number_of_open_questions / len(texts))
     questions = []
     # Create questions from text with llm
     for content in texts:
-        prompt = prepare_prompt_open_question(content, number_of_open_questions)
-        custom_functions = open_questions_func_definition()
-        response = complete_text(prompt, True, custom_functions)
+        prompt = prepare_prompt_open_question(content, questions_per_page)
+        custom_function = open_questions_func_definition()
+        response = complete_text(prompt, True, custom_function)
         partial_questions = json.loads(response["arguments"])["questions"].split("#")
         questions += partial_questions
 

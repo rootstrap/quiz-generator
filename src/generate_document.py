@@ -1,4 +1,5 @@
 import os
+import random
 import subprocess
 from typing import List
 
@@ -43,11 +44,9 @@ def generate_exams(
 ):
     open_q_split = []
     if len(open_questions) > 0:
-        open_q = open_questions[
-            : number_of_open * number_of_exams
-        ]  # assumption: number of questions small and exams small enough
+        # assumption: number of questions small and exams small enough
+        open_q = random.sample(open_questions, number_of_open * number_of_exams)
         open_q_split = np.array_split(open_q, number_of_exams)
-
     content = ""
     for i in range(0, number_of_exams):
         content += f"# Exam {i+1}\n\n"

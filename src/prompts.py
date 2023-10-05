@@ -29,22 +29,20 @@ prompt_variation_question = (
 
 
 def open_questions_func_definition() -> str:
-    return [
-        {
-            "name": "process_questions",
-            "description": "Get a list of exam questions separated by this character: #. And then process them.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "questions": {
-                        "type": "string",
-                        "description": "The list of questions that must be separated by this character: #. WITHOUT the question number, WITHOUT newline.",
-                    }
-                },
-                "required": ["questions"],
+    return {
+        "name": "process_questions",
+        "description": "Get a list of exam questions separated by this character: #. And then process them.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "string",
+                    "description": "The list of questions that must be separated by this character: #. WITHOUT the question number, WITHOUT newline.",
+                }
             },
-        }
-    ]
+            "required": ["questions"],
+        },
+    }
 
 
 def prepare_prompt_multiple_choice(
