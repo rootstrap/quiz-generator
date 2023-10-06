@@ -1,17 +1,17 @@
+import copy
+import json
 import os
-import random
 import subprocess
-from typing import List
+from typing import Dict, List
 
-import numpy as np
-
+from config.cfg import OUTPUT_FOLDER
 from model.question import Question
 
 TEMP_MD_FILE = "__temp.md"
 TEMP_PDF_FILE = "__temp.pdf"
 
 
-def markdown_to_pdf(markdown: str, output_file: str):
+def _markdown_to_pdf(markdown: str, output_file: str):
     """
     Convert Markdown to PDF
     :param markdown: Markdown string
@@ -19,13 +19,15 @@ def markdown_to_pdf(markdown: str, output_file: str):
     """
     with open(TEMP_MD_FILE, "w") as f:
         f.write(markdown)
-
-    subprocess.run(["mdpdf", TEMP_MD_FILE, "--output", output_file, "--paper", "A4"])
+    output_filepath = OUTPUT_FOLDER + "/" + output_file
+    subprocess.run(
+        ["mdpdf", TEMP_MD_FILE, "--output", output_filepath, "--paper", "A4"]
+    )
 
     os.remove(TEMP_MD_FILE)
 
 
-def generate_markdown(questions: List[Question]) -> str:
+def _generate_markdown(questions: List[Question]) -> str:
     markdown = ""
     index = 1
     for question in questions:
@@ -36,22 +38,23 @@ def generate_markdown(questions: List[Question]) -> str:
     return markdown
 
 
-def generate_exams(
-    open_questions: List[Question],
-    number_of_open: int,
-    number_of_exams: int,
-    output_file,
-):
-    open_q_split = []
-    if len(open_questions) > 0:
-        # assumption: number of questions small and exams small enough
-        open_q = random.sample(open_questions, number_of_open * number_of_exams)
-        open_q_split = np.array_split(open_q, number_of_exams)
+def exams2pdf(exams: Dict[str, List[Question]], output_file: str):
     content = ""
-    for i in range(0, number_of_exams):
+    for i, exam in enumerate(exams):
         content += f"# Exam {i+1}\n\n"
-        if len(open_q_split) > 0:
-            content += generate_markdown(open_q_split[i].tolist())
+        questions = exams[exam]
+        if len(questions) > 0:
+            content += _generate_markdown(questions)
             content += "\n"
+    _markdown_to_pdf(content, output_file)
 
-    markdown_to_pdf(content, output_file)
+
+def exams2json(exams: Dict[str, List[Question]], output_file: str):
+    # Open the file in write mode and use json.dump() to write the dictionary to the file
+    exams_copy = copy.deepcopy(exams)
+    for exam in exams_copy:
+        exams_copy[exam] = list(map(lambda q: q.to_serializable(), exams_copy[exam]))
+    output_filepath = OUTPUT_FOLDER + "/" + output_file
+    with open(output_filepath, "w") as json_file:
+        json.dump(exams_copy, json_file)
+    print(f"Exams saved to {output_filepath}")

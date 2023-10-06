@@ -2,9 +2,9 @@ from abc import abstractmethod
 
 import streamlit as st
 
-from config.cfg import CONTENT_FILEPATH
-from src.api import get_open_questions
-from src.generate_document import generate_exams
+from config.cfg import CONTENT_FILEPATH, OUTPUT_FOLDER
+from src.exams_api import generate_exams, get_open_questions
+from src.generate_document import exams2json, exams2pdf
 
 
 class PageEnum:
@@ -121,19 +121,26 @@ class ConfigureExam(Page):
                             "The exams have been generated. You can download the questions as a PDF"
                         )
 
-                        output_filename = "exams.pdf"
-                        generate_exams(
+                        # Build exams
+                        exams = generate_exams(
                             open_questions=app.open_questions,
                             number_of_open=app.question_args[
                                 "number_of_open_questions_exam"
                             ],
                             number_of_exams=app.question_args["number_of_exams"],
-                            output_file=output_filename,
                         )
+
+                        # Generate output files
+                        output_filename = "exams.pdf"
+                        exams2pdf(exams, output_filename)
+                        json_filename = "exams.json"
+                        exams2json(exams, json_filename)
 
                         st.download_button(
                             "Download",
-                            data=open(output_filename, "rb").read(),
+                            data=open(
+                                OUTPUT_FOLDER + "/" + output_filename, "rb"
+                            ).read(),
                             file_name=output_filename,
                             mime="application/pdf",
                             help="Download the exams as a PDF file",

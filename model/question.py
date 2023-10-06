@@ -52,6 +52,13 @@ class Question:
                 markdown += f"{options[i]}. {self.answers[i]}\n\n"
         return markdown
 
+    def to_serializable(self):
+        if self.question_type == QuestionType.MULTIPLE_CHOICE:
+            question = {self.question: self.answers}
+        else:
+            question = self.question
+        return question
+
     def check_response(self):
         if self.question_type == QuestionType.MULTIPLE_CHOICE:
             if len(self.response) == len(self.correct_answers):
